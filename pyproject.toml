@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Turn long videos and live streams into ready-to-post vertical clips, on your own PC."
 readme = "README.md"
 license = { file = "LICENSE" }
-authors = [{ name = "Ashutosh" }, { name = "Jad Ghazi" }]
+authors = [{ name = "Ashutosh" }]
 keywords = ["video", "clips", "highlights", "shorts", "reels", "live-stream", "twitch", "youtube", "whisper", "hinglish", "captions", "ffmpeg"]
 classifiers = [
   "Development Status :: 3 - Alpha",

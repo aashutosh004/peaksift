@@ -156,10 +156,8 @@ way around DRM or paywalls, and never will.
 
 ## Credits
 
-PeakSift began as a fork of [AutoClip](https://github.com/artbyjazi/autoclip) by
-Jad Ghazi (MIT) and builds on Whisper, faster-whisper, the Oriserve and Trelis
-Hinglish models, OpenCV, MediaPipe, FFmpeg, yt-dlp and more — see
-[NOTICE.md](NOTICE.md).
+PeakSift builds on Whisper, faster-whisper, the Oriserve and Trelis Hinglish
+models, OpenCV, MediaPipe, FFmpeg, yt-dlp and more — see [NOTICE.md](NOTICE.md).
 
 ## License
 

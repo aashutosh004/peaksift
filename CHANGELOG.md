@@ -5,8 +5,7 @@ versions follow [semantic versioning](https://semver.org/).
 
 ## 0.1.0 — first release
 
-PeakSift's first release, built on [AutoClip](https://github.com/artbyjazi/autoclip)
-(see [NOTICE.md](NOTICE.md) for what came from where).
+PeakSift's first release.
 
 ### Finding moments
 
@@ -62,8 +61,3 @@ PeakSift's first release, built on [AutoClip](https://github.com/artbyjazi/autoc
   to system memory on the next job.
 - Ollama "thinking" models answer directly and unload soon after ranking.
 - Web app files are revalidated, so an update never leaves an old page running.
-
-## Before 0.1.0
-
-Development history of AutoClip (ingest, transcription, LLM highlight
-detection, speaker-tracked reframing, caption styles, export) is in the git log.
