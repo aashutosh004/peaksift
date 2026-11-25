@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# uv
+uv.lock
+
+# PeakSift runtime artifacts
+.peaksift/
+*.db
+*.sqlite3
+
+# Test media (large binaries stay out of git; see tests/fixtures/README.md)
+tests/fixtures/media/
+tests/fixtures/**/*.mp4
+tests/fixtures/**/*.mkv
+tests/fixtures/**/*.webm
+tests/fixtures/**/*.wav
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+
+# Project-local tools, caches, models and app data (see scripts/env.ps1)
+.local/

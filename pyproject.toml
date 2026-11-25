@@ -1,0 +1,129 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "peaksift"
+version = "0.1.0"
+description = "Turn long videos and live streams into ready-to-post vertical clips, on your own PC."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "Ashutosh" }, { name = "Jad Ghazi" }]
+keywords = ["video", "clips", "highlights", "shorts", "reels", "live-stream", "twitch", "youtube", "whisper", "hinglish", "captions", "ffmpeg"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Environment :: Web Environment",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Multimedia :: Video",
+]
+
+# Hard upper bound: MediaPipe publishes no wheels for 3.13+, and the reframe
+# stage (pipeline/reframe) cannot run without it. WhisperX also caps at <3.14.
+requires-python = ">=3.11,<3.13"
+
+dependencies = [
+  # Web layer
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "sse-starlette>=2.1",
+  "python-multipart>=0.0.9",
+  # Models / config
+  "pydantic>=2.9",
+  "pydantic-settings>=2.5",
+  "keyring>=25.4",
+  # Ingest
+  "yt-dlp>=2026.1.1",
+  # Transcription
+  "faster-whisper>=1.1",
+  # Reframe
+  "mediapipe>=0.10.14",
+  # No [opencv] extra: scenedetect 0.7 dropped it and now depends on
+  # opencv-python directly. cv2, which reframe/faces.py imports, arrives through
+  # this and through mediapipe.
+  "scenedetect>=0.6.4",
+  # No upper bound: nothing here requires numpy 1.x, and capping it below 2.0
+  # made the diarization extra unsatisfiable, since WhisperX requires >=2.1.
+  "numpy>=1.26",
+  # Captions
+  "pysubs2>=1.7",
+  # Providers
+  "anthropic>=0.40",
+  "openai>=1.55",
+  "google-genai>=0.3",
+  "httpx>=0.27",
+  # CLI / UX
+  "typer>=0.12",
+  "rich>=13.9",
+]
+
+[project.optional-dependencies]
+# Speaker diarization. Pulls torch + pyannote (large). Requires a HuggingFace
+# token and acceptance of the gated pyannote model licenses.
+diarization = [
+  "whisperx>=3.8",
+]
+# NVIDIA CUDA 12 runtime libraries for faster-whisper/CTranslate2 on Windows and
+# Linux. Without these the usual failure is a missing cudnn_ops64_9.dll at the
+# first GPU transcribe.
+# Markers matter here: these wheels are not published for macOS, so without
+# them `pip install peaksift[gpu]` fails to resolve on a Mac — which is exactly
+# what doctor tells you to run when it can't see your GPU. On macOS the extra
+# now installs nothing, which is correct: there is no CUDA there, and Apple
+# Silicon takes the CPU path anyway.
+gpu = [
+  "nvidia-cublas-cu12>=12.4; platform_system != 'Darwin'",
+  "nvidia-cudnn-cu12>=9.1; platform_system != 'Darwin'",
+]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "pytest-cov>=5.0",
+  "ruff>=0.7",
+  "mypy>=1.13",
+]
+
+[project.urls]
+Homepage = "https://github.com/aashutosh004/peaksift"
+Repository = "https://github.com/aashutosh004/peaksift"
+Issues = "https://github.com/aashutosh004/peaksift/issues"
+
+[project.scripts]
+peaksift = "peaksift.cli:app"
+
+[tool.hatch.build.targets.wheel]
+# The web app (webui/), layout picker and prompts are plain files inside the
+# package, so they ship with it — there is no build step.
+packages = ["backend/peaksift"]
+
+[tool.hatch.build.targets.sdist]
+include = ["backend/peaksift", "docs", "README.md", "LICENSE", "NOTICE.md"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "C4"]
+ignore = ["B008"]  # typer/fastapi use function calls in argument defaults by design
+
+[tool.ruff.lint.per-file-ignores]
+# The benchmark's HTML report template and word list read better unwrapped.
+"scripts/caption_benchmark.py" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+  "slow: tests that run the real pipeline (deselect with '-m \"not slow\"')",
+  "golden: reframe acceptance-bar tests against the golden video set",
+  "e2e: full-pipeline run against real media (needs PEAKSIFT_E2E_MEDIA)",
+]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true

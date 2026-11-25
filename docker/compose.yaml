@@ -1,0 +1,49 @@
+name: peaksift
+
+services:
+  peaksift:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: base
+    image: peaksift:latest
+    ports:
+      # Bound to loopback: PeakSift has no authentication, so it must not be
+      # reachable from the network by default. Change to "8000:8000" only on a
+      # network you trust.
+      - '127.0.0.1:8000:8000'
+    volumes:
+      - peaksift-data:/data
+      # Drop source files here to ingest them without uploading through the UI.
+      - ./media:/media:ro
+    environment:
+      PEAKSIFT_HOME: /data
+    restart: unless-stopped
+
+  # docker compose --profile gpu up
+  peaksift-gpu:
+    profiles: ['gpu']
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      target: gpu
+    image: peaksift:gpu
+    ports:
+      - '127.0.0.1:8000:8000'
+    volumes:
+      - peaksift-data:/data
+      - ./media:/media:ro
+    environment:
+      PEAKSIFT_HOME: /data
+      NVIDIA_VISIBLE_DEVICES: all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+volumes:
+  peaksift-data:

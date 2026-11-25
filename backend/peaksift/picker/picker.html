@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layout picker</title>
+<style>
+  @font-face { font-family: "Plex"; src: url("/ui/fonts/plex-sans-400.woff2") format("woff2"); font-weight: 400; }
+  @font-face { font-family: "Plex"; src: url("/ui/fonts/plex-sans-500.woff2") format("woff2"); font-weight: 500; }
+  @font-face { font-family: "Plex"; src: url("/ui/fonts/plex-sans-600.woff2") format("woff2"); font-weight: 600; }
+  :root {
+    color-scheme: light;
+    --canvas: #f5f5f3; --surface: #ffffff; --sunken: #ececea; --ink: #17191e; --ink-2: #3a3f48;
+    --muted: #626875; --line: #e2e3e0; --line-strong: #cdd0ca; --on-ink: #ffffff;
+    --cam: #e5484d; --game: #3e7bfa; --ok: #1f7f4f; --bad: #b93434;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --canvas: #16181c; --surface: #1e2126; --sunken: #25292f; --ink: #ecedef; --ink-2: #c8ccd3;
+      --muted: #9aa0ab; --line: #2c3036; --line-strong: #3b4048; --on-ink: #16181c; --ok: #4cc488; --bad: #f07171;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 14px/1.5 "Plex", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  header { background: var(--surface); border-bottom: 1px solid var(--line); }
+  header .inner { max-width: 1240px; margin: 0 auto; padding: 14px 24px; display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  header h1 { font-size: 17px; font-weight: 600; margin: 0; }
+  header span { color: var(--muted); }
+  main { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 32px; padding: 28px 24px 48px; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+  .stage { position: relative; background: #000; border-radius: 10px; overflow: hidden; user-select: none; }
+  .stage canvas { display: block; width: 100%; height: auto; cursor: crosshair; }
+  .panel { padding: 0 0 22px; }
+  .panel + .panel { padding-top: 22px; border-top: 1px solid var(--line); }
+  .panel h2 { font-size: 15px; font-weight: 600; margin: 0 0 12px; }
+  label { display: block; margin: 14px 0 6px; font-size: 13px; font-weight: 500; color: var(--ink-2); }
+  input[type=range] { width: 100%; accent-color: var(--ink); }
+  input[type=checkbox] { accent-color: var(--ink); width: 16px; height: 16px; margin: 0; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .chip { display: inline-flex; align-items: center; gap: 7px; }
+  label.check { display: flex; align-items: flex-start; gap: 10px; font-weight: 400; font-size: 14px; color: var(--ink); }
+  label.check input { margin-top: 3px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  button { height: 34px; padding: 0 13px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--surface);
+           color: var(--ink); font: 500 13px "Plex", system-ui, sans-serif; cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--ink); border-color: var(--ink); color: var(--on-ink); height: 38px; padding: 0 16px; font-size: 14px; }
+  .mode { display: inline-flex; gap: 2px; padding: 3px; background: var(--sunken); border-radius: 8px; }
+  .mode button { height: 30px; border: 0; background: transparent; color: var(--muted); }
+  .mode button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .preview { display: flex; justify-content: center; margin-top: 16px; }
+  .preview canvas { width: 216px; height: 384px; border-radius: 10px; background: #000; }
+  .hint { color: var(--muted); font-size: 13px; margin: 10px 0 0; }
+  code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; background: var(--sunken); padding: 1px 4px; border-radius: 4px; }
+  .msg { margin-top: 10px; min-height: 20px; }
+  .msg.ok { color: var(--ok); } .msg.err { color: var(--bad); }
+  .timebar { display: flex; gap: 12px; align-items: center; margin-top: 14px; font-variant-numeric: tabular-nums; }
+  .timebar input { flex: 1; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <h1>Facecam and gameplay layout</h1>
+    <span id="title">Loading…</span>
+  </div>
+</header>
+<main>
+  <section>
+    <div class="stage"><canvas id="frame"></canvas></div>
+    <div class="timebar">
+      <span id="tlabel">0:00</span>
+      <input id="t" type="range" min="0" max="100" step="1" value="0">
+      <button id="loadFrame">Show this moment</button>
+    </div>
+    <p class="hint">
+      Drag a box to move it, drag a corner to resize it. Choose which box you are editing
+      on the right, or draw a new one by dragging on an empty area.
+    </p>
+  </section>
+  <aside>
+    <div class="panel">
+      <h2>Boxes</h2>
+      <div class="row mode">
+        <button id="modeCam" class="on"><span class="chip"><span class="dot" style="background:var(--cam)"></span>Facecam</span></button>
+        <button id="modeGame"><span class="chip"><span class="dot" style="background:var(--game)"></span>Gameplay</span></button>
+      </div>
+      <label class="check"><input id="autoGame" type="checkbox"><span>Gameplay: use the centre of the frame (auto)</span></label>
+      <div class="row" style="margin-top:10px">
+        <button id="useDetected">Use auto-detected facecam</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h2>Vertical frame</h2>
+      <label for="split">Facecam height: <b id="splitOut">35%</b> of the frame</label>
+      <input id="split" type="range" min="25" max="70" step="1" value="35">
+      <label>Facecam position</label>
+      <div class="row mode">
+        <button id="posTop" class="on">Top</button>
+        <button id="posBottom">Bottom</button>
+      </div>
+      <div class="preview" style="margin-top:14px"><canvas id="preview" width="270" height="480"></canvas></div>
+    </div>
+    <div class="panel">
+      <h2>Save</h2>
+      <label class="check"><input id="forChannel" type="checkbox" checked><span>Also use for every video and stream of <b id="presetKey">this channel</b></span></label>
+      <div class="row" style="margin-top:12px">
+        <button id="save" class="primary">Save layout</button>
+      </div>
+      <div id="msg" class="msg"></div>
+      <p class="hint">After saving, press <b>Re-render all</b> on the video's page (or run <code>peaksift rerender &lt;job&gt;</code>) to redo its clips with this layout.</p>
+    </div>
+  </aside>
+</main>
+<script>
+(() => {
+  const params = new URLSearchParams(location.search);
+  const job = params.get("job");
+  const $ = (id) => document.getElementById(id);
+  const frame = $("frame"), fctx = frame.getContext("2d");
+  const preview = $("preview"), pctx = preview.getContext("2d");
+  const img = new Image();
+  const OUT_W = 1080, OUT_H = 1920;
+
+  const state = {
+    cam: [0.75, 0.05, 0.22, 0.3],   // normalised x, y, w, h
+    game: [0.2, 0.0, 0.6, 1.0],
+    autoGame: true,
+    split: 0.35,
+    position: "top",
+    active: "cam",
+    drag: null,
+    detected: null,
+    width: 1920, height: 1080,
+  };
+
+  const fmt = (s) => {
+    s = Math.max(0, Math.floor(s));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(sec).padStart(2, "0");
+  };
+  const clampBox = (b) => {
+    let [x, y, w, h] = b;
+    w = Math.min(1, Math.max(0.02, w)); h = Math.min(1, Math.max(0.02, h));
+    x = Math.min(1 - w, Math.max(0, x)); y = Math.min(1 - h, Math.max(0, y));
+    return [x, y, w, h];
+  };
+
+  // Same maths as the backend's _cover_box: shrink to the panel's shape, centred.
+  function cover(box, aspect) {
+    let [x, y, w, h] = [box[0] * state.width, box[1] * state.height, box[2] * state.width, box[3] * state.height];
+    const cx = x + w / 2, cy = y + h / 2;
+    if (w / h > aspect) w = h * aspect; else h = w / aspect;
+    return [cx - w / 2, cy - h / 2, w, h];
+  }
+  function gameBox() {
+    if (!state.autoGame) return state.game;
+    const gameH = OUT_H - Math.round(OUT_H * state.split / 2) * 2;
+    const gw = Math.min(state.width, state.height * OUT_W / gameH) / state.width;
+    return [(1 - gw) / 2, 0, gw, 1];
+  }
+
+  function draw() {
+    if (!img.naturalWidth) return;
+    frame.width = img.naturalWidth; frame.height = img.naturalHeight;
+    fctx.drawImage(img, 0, 0);
+    const W = frame.width, H = frame.height;
+    const boxes = [["game", gameBox(), "#3e7bfa"], ["cam", state.cam, "#e5484d"]];
+    for (const [key, b, color] of boxes) {
+      const [x, y, w, h] = [b[0] * W, b[1] * H, b[2] * W, b[3] * H];
+      fctx.lineWidth = Math.max(2, W / 400);
+      fctx.strokeStyle = color;
+      fctx.setLineDash(key === "game" && state.autoGame ? [12, 8] : []);
+      fctx.strokeRect(x, y, w, h);
+      fctx.setLineDash([]);
+      fctx.fillStyle = color + "22";
+      fctx.fillRect(x, y, w, h);
+      if (key === state.active && !(key === "game" && state.autoGame)) {
+        const s = Math.max(10, W / 120);
+        fctx.fillStyle = color;
+        for (const [hx, hy] of [[x, y], [x + w, y], [x, y + h], [x + w, y + h]]) fctx.fillRect(hx - s / 2, hy - s / 2, s, s);
+      }
+      fctx.font = `${Math.max(14, W / 70)}px system-ui`;
+      fctx.fillStyle = color;
+      fctx.fillText(key === "cam" ? "FACECAM" : "GAMEPLAY", x + 6, y + Math.max(18, W / 60));
+    }
+    drawPreview();
+  }
+
+  function drawPreview() {
+    const pw = preview.width, ph = preview.height;
+    pctx.fillStyle = "#000"; pctx.fillRect(0, 0, pw, ph);
+    const camH = Math.round(OUT_H * state.split / 2) * 2, gameH = OUT_H - camH;
+    const cam = cover(state.cam, OUT_W / camH), game = cover(gameBox(), OUT_W / gameH);
+    const camPx = camH / OUT_H * ph, gamePx = ph - camPx;
+    const order = state.position === "top" ? [[cam, camPx], [game, gamePx]] : [[game, gamePx], [cam, camPx]];
+    let y = 0;
+    for (const [src, h] of order) {
+      pctx.drawImage(img, src[0], src[1], src[2], src[3], 0, y, pw, h);
+      y += h;
+    }
+    pctx.fillStyle = "rgba(0,0,0,.6)";
+    pctx.fillRect(0, (state.position === "top" ? camPx : gamePx) - 1, pw, 2);
+  }
+
+  // --- mouse interaction -------------------------------------------------
+  function toNorm(ev) {
+    const r = frame.getBoundingClientRect();
+    return [(ev.clientX - r.left) / r.width, (ev.clientY - r.top) / r.height];
+  }
+  function activeBox() { return state.active === "cam" ? state.cam : state.game; }
+  function setActiveBox(b) { if (state.active === "cam") state.cam = clampBox(b); else state.game = clampBox(b); }
+
+  frame.addEventListener("pointerdown", (ev) => {
+    if (state.active === "game" && state.autoGame) { state.autoGame = false; $("autoGame").checked = false; }
+    const [px, py] = toNorm(ev);
+    const b = activeBox();
+    const r = frame.getBoundingClientRect();
+    const tolX = 14 / r.width, tolY = 14 / r.height;
+    const corners = [[b[0], b[1]], [b[0] + b[2], b[1]], [b[0], b[1] + b[3]], [b[0] + b[2], b[1] + b[3]]];
+    const ci = corners.findIndex(([cx, cy]) => Math.abs(cx - px) < tolX && Math.abs(cy - py) < tolY);
+    if (ci >= 0) state.drag = { kind: "corner", corner: ci, start: [px, py], box: [...b] };
+    else if (px >= b[0] && px <= b[0] + b[2] && py >= b[1] && py <= b[1] + b[3])
+      state.drag = { kind: "move", start: [px, py], box: [...b] };
+    else state.drag = { kind: "draw", start: [px, py], box: [px, py, 0.02, 0.02] };
+    frame.setPointerCapture(ev.pointerId);
+  });
+  frame.addEventListener("pointermove", (ev) => {
+    if (!state.drag) return;
+    const [px, py] = toNorm(ev);
+    const d = state.drag, [sx, sy] = d.start, b = d.box;
+    if (d.kind === "move") setActiveBox([b[0] + px - sx, b[1] + py - sy, b[2], b[3]]);
+    else if (d.kind === "draw") setActiveBox([Math.min(sx, px), Math.min(sy, py), Math.abs(px - sx), Math.abs(py - sy)]);
+    else {
+      let [x1, y1, x2, y2] = [b[0], b[1], b[0] + b[2], b[1] + b[3]];
+      if (d.corner === 0 || d.corner === 2) x1 = px; else x2 = px;
+      if (d.corner === 0 || d.corner === 1) y1 = py; else y2 = py;
+      setActiveBox([Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1)]);
+    }
+    draw();
+  });
+  const endDrag = () => { state.drag = null; };
+  frame.addEventListener("pointerup", endDrag);
+  frame.addEventListener("pointercancel", endDrag);
+
+  // --- controls ------------------------------------------------------------
+  function setMode(which) {
+    state.active = which;
+    $("modeCam").classList.toggle("on", which === "cam");
+    $("modeGame").classList.toggle("on", which === "game");
+    draw();
+  }
+  $("modeCam").onclick = () => setMode("cam");
+  $("modeGame").onclick = () => setMode("game");
+  $("autoGame").onchange = (e) => { state.autoGame = e.target.checked; draw(); };
+  $("split").oninput = (e) => { state.split = +e.target.value / 100; $("splitOut").textContent = e.target.value + "%"; draw(); };
+  function setPos(p) {
+    state.position = p;
+    $("posTop").classList.toggle("on", p === "top");
+    $("posBottom").classList.toggle("on", p === "bottom");
+    draw();
+  }
+  $("posTop").onclick = () => setPos("top");
+  $("posBottom").onclick = () => setPos("bottom");
+  $("useDetected").onclick = () => {
+    if (!state.detected) { msg("No facecam was auto-detected for this video.", "err"); return; }
+    state.cam = clampBox(state.detected); setMode("cam");
+  };
+  $("t").oninput = (e) => { $("tlabel").textContent = fmt(+e.target.value); };
+  $("loadFrame").onclick = () => loadFrame(+$("t").value);
+
+  function msg(text, kind) { const m = $("msg"); m.textContent = text; m.className = "msg " + (kind || ""); }
+
+  function loadFrame(t) {
+    img.onload = draw;
+    img.src = `/api/layouts/jobs/${encodeURIComponent(job)}/frame?t=${t.toFixed(1)}&_=${Date.now()}`;
+  }
+
+  $("save").onclick = async () => {
+    msg("Saving…");
+    const body = {
+      facecam: state.cam,
+      gameplay: state.autoGame ? null : state.game,
+      split: state.split,
+      facecam_position: state.position,
+      save_for_channel: $("forChannel").checked,
+    };
+    try {
+      const res = await fetch(`/api/layouts/jobs/${encodeURIComponent(job)}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+      const data = await res.json();
+      msg("Saved" + (data.saved.channel ? ` for this job and for ${data.saved.channel}` : " for this job") +
+          ". You can close this tab.", "ok");
+    } catch (err) { msg("Could not save: " + err.message, "err"); }
+  };
+
+  async function init() {
+    if (!job) { $("title").textContent = "No job given (open this page from `peaksift layout <job>`)."; return; }
+    const res = await fetch(`/api/layouts/jobs/${encodeURIComponent(job)}/context`);
+    if (!res.ok) { $("title").textContent = "Job not found."; return; }
+    const ctx = await res.json();
+    $("title").textContent = ctx.title || ctx.job_id;
+    state.width = ctx.width || 1920; state.height = ctx.height || 1080;
+    state.detected = ctx.detected_facecam;
+    const L = ctx.layout;
+    state.split = (L && L.split) || ctx.defaults.split;
+    state.position = (L && L.facecam_position) || ctx.defaults.facecam_position;
+    if (L) {
+      state.cam = clampBox(L.facecam);
+      if (L.gameplay) { state.game = clampBox(L.gameplay); state.autoGame = false; }
+    } else if (ctx.detected_facecam) state.cam = clampBox(ctx.detected_facecam);
+    $("autoGame").checked = state.autoGame;
+    $("split").value = Math.round(state.split * 100); $("splitOut").textContent = Math.round(state.split * 100) + "%";
+    setPos(state.position);
+    if (ctx.preset_key) $("presetKey").textContent = ctx.preset_key;
+    else { $("forChannel").checked = false; $("forChannel").disabled = true; $("presetKey").textContent = "(no channel for this source)"; }
+    $("t").max = Math.max(1, Math.floor(ctx.duration_s));
+    $("t").value = Math.floor(ctx.suggested_t || 0);
+    $("tlabel").textContent = fmt(+$("t").value);
+    loadFrame(+$("t").value);
+  }
+  init();
+})();
+</script>
+</body>
+</html>

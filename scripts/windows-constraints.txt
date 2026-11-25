@@ -1,0 +1,44 @@
+# Windows: exact versions of the packages that ship native binaries (.pyd/.dll),
+# as verified on a Windows 11 machine with Smart App Control on.
+#
+# setup.ps1 installs with these as constraints, so Windows users get the set
+# that was tested, rather than whatever was released yesterday. Smart App
+# Control judges unsigned libraries by reputation, and a brand-new release can
+# be refused ("An Application Control policy has blocked this file"); setup.ps1
+# also re-checks and reinstalls a blocked package. Pure-Python packages
+# (yt-dlp, which must stay current) aren't listed.
+#
+# To refresh: install fresh on Windows, run the tests and a real job, then
+# regenerate this list from that .venv (packages whose files include .pyd/.dll).
+ast_serialize==0.13.1
+av==19.0.2
+cffi==2.1.1
+charset-normalizer==3.5.2
+contourpy==1.4.0
+coverage==7.17.3
+cryptography==50.0.2
+ctranslate2==4.9.0
+fonttools==4.68.0
+hf-xet==1.8.0
+httptools==0.9.0
+jiter==0.19.0
+kiwisolver==1.5.1
+librt==0.17.0
+matplotlib==3.11.2
+mediapipe==1.2.3
+mypy==2.4.1
+numpy==2.5.5
+nvidia-cublas-cu12==12.9.2.10
+nvidia-cuda-nvrtc-cu12==12.9.86
+nvidia-cudnn-cu12==9.28.1.4
+onnxruntime==1.32.0
+opencv-contrib-python==5.1.0.95
+opencv-python==5.1.0.95
+pillow==13.0.0
+protobuf==7.36.2
+pydantic_core==2.50.5
+PyYAML==6.0.3
+sounddevice==0.5.6
+tokenizers==0.23.3
+watchfiles==1.3.0
+websockets==17.4
